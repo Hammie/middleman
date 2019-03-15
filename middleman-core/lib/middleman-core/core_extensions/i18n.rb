@@ -216,6 +216,10 @@ class Middleman::CoreExtensions::Internationalization < ::Middleman::Extension
     lookup = ::Middleman::Util.parse_uri(path)
     lookup.path << app.config[:index_file] if lookup.path&.end_with?('/')
 
+    # Find source path in sitemap
+    resource = app.sitemap.find_resource_by_destination_path(lookup.path)
+    lookup.path = '/' + resource.path.sub(options[:templates_dir], '') if resource
+
     if @lookup[lookup.path] && @lookup[lookup.path][locale]
       lookup.path = @lookup[lookup.path][locale]
       lookup.to_s
