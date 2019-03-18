@@ -77,13 +77,11 @@ class Middleman::CoreExtensions::Internationalization < ::Middleman::Extension
 
       opts[:relative] = false
 
-      href = super(path_or_resource, opts)
-
-      final_path = if result = extensions[:i18n].localized_path(href, locale)
+      final_path = if result = extensions[:i18n].localized_path(path_or_resource, locale)
         result
       else
         # Should we log the missing file?
-        href
+        path_or_resource
       end
 
       opts[:relative] = should_relativize
@@ -192,14 +190,24 @@ class Middleman::CoreExtensions::Internationalization < ::Middleman::Extension
     end
   end
 
-  Contract String, Symbol => Maybe[String]
-  def localized_path(path, locale)
-    lookup_path = path.dup
-    lookup_path << app.config[:index_file] if lookup_path.end_with?('/')
+  def get_lookup_path(resource_or_path)
+    # Find resource in sitemap
+    if resource_or_path.respond_to? 'path'
+      resource_or_path
+    else
+      resource = app.sitemap.find_resource_by_path(resource_or_path)
+      if resource
+        '/' + resource.path.sub(options[:templates_dir], '')
+      else
+        resource_or_path.path
+      end
+    end
+  end
 
-    # Find source path in sitemap
-    resource = app.sitemap.find_resource_by_destination_path(lookup_path)
-    lookup_path = '/' + resource.path.sub(options[:templates_dir], '') if resource
+  Contract String, Symbol => Maybe[String]
+  def localized_path(resource_or_path, locale)
+    lookup_path = get_lookup_path(resource_or_path)
+    lookup_path << app.config[:index_file] if lookup_path.end_with?('/')
 
     @lookup[lookup_path] && @lookup[lookup_path][locale]
   end
